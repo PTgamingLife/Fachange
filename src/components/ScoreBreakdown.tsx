@@ -25,22 +25,25 @@ function scoreLabel(s: number): string {
   return '需加強';
 }
 
-function ScoreBar({ label, score, icon, delay = 0 }: { label: string; score: number; icon: string; delay?: number }) {
+function ScoreBar({ label, score, icon, delay = 0 }: {
+  label: string; score: number; icon: string; delay?: number;
+}) {
   return (
-    <div className="space-y-2" style={{ animationDelay: `${delay}ms` }}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{icon}</span>
-          <span className="text-white/80 text-sm font-medium">{label}</span>
+    <div className="space-y-1.5" style={{ animationDelay: `${delay}ms` }}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-base shrink-0">{icon}</span>
+          <span className="text-white/80 text-sm font-medium truncate">{label}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`text-xs px-2 py-0.5 rounded-full bg-white/10 ${score >= 75 ? 'text-green-400' : score >= 60 ? 'text-yellow-400' : 'text-orange-400'}`}>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`text-xs px-2 py-0.5 rounded-full bg-white/10 hidden sm:inline
+            ${score >= 75 ? 'text-green-400' : score >= 60 ? 'text-yellow-400' : 'text-orange-400'}`}>
             {scoreLabel(score)}
           </span>
-          <span className="text-white font-bold text-lg w-12 text-right">{Math.round(score)}</span>
+          <span className="text-white font-bold text-base w-10 text-right">{Math.round(score)}</span>
         </div>
       </div>
-      <div className="h-2.5 bg-white/10 rounded-full overflow-hidden">
+      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full bg-gradient-to-r ${scoreColor(score)} transition-all duration-1000 ease-out`}
           style={{ width: `${score}%` }}
@@ -50,21 +53,21 @@ function ScoreBar({ label, score, icon, delay = 0 }: { label: string; score: num
   );
 }
 
-function SkinMetric({ label, value, invert = false, unit = '' }: { label: string; value: number; invert?: boolean; unit?: string }) {
-  const displayScore = invert ? 100 - value : value;
+function SkinMetric({ label, value, invert = false }: {
+  label: string; value: number; invert?: boolean;
+}) {
+  const ds = invert ? 100 - value : value;
   return (
-    <div className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
-      <span className="text-white/60 text-sm">{label}</span>
+    <div className="flex justify-between items-center py-1.5 border-b border-white/5 last:border-0">
+      <span className="text-white/55 text-xs">{label}</span>
       <div className="flex items-center gap-2">
-        <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
+        <div className="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full ${displayScore >= 70 ? 'bg-green-400' : displayScore >= 50 ? 'bg-yellow-400' : 'bg-orange-400'}`}
-            style={{ width: `${displayScore}%` }}
+            className={`h-full rounded-full ${ds >= 70 ? 'bg-green-400' : ds >= 50 ? 'bg-yellow-400' : 'bg-orange-400'}`}
+            style={{ width: `${ds}%` }}
           />
         </div>
-        <span className="text-white/80 text-sm w-16 text-right">
-          {unit || `${Math.round(displayScore)}%`}
-        </span>
+        <span className="text-white/70 text-xs w-10 text-right">{Math.round(ds)}%</span>
       </div>
     </div>
   );
@@ -74,70 +77,70 @@ export default function ScoreBreakdown({ scores, skin, improvements, faceShape, 
   const topImprovements = improvements.slice(0, 3);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Main scores */}
-      <div className="bg-white/5 rounded-2xl p-6 space-y-5">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+    <div className="space-y-4 animate-fade-in">
+      {/* Main dimension scores */}
+      <div className="bg-white/5 rounded-2xl p-4 space-y-4">
+        <h3 className="text-base font-semibold text-white flex items-center gap-2">
           <span>📊</span> 各維度評分
         </h3>
-        <ScoreBar label="輪廓與臉型" score={scores.contour} icon="🔷" delay={0} />
-        <ScoreBar label="五官比例" score={scores.proportion} icon="📐" delay={100} />
-        <ScoreBar label="對稱性" score={scores.symmetry} icon="⚖️" delay={200} />
-        <ScoreBar label="肌理膚況" score={scores.skinTexture} icon="✨" delay={300} />
-        <ScoreBar label="視覺年輕度" score={scores.youthfulness} icon="🌿" delay={400} />
+        <ScoreBar label="輪廓與臉型" score={scores.contour}     icon="🔷" delay={0} />
+        <ScoreBar label="五官比例"   score={scores.proportion}  icon="📐" delay={80} />
+        <ScoreBar label="對稱性"     score={scores.symmetry}    icon="⚖️" delay={160} />
+        <ScoreBar label="肌理膚況"   score={scores.skinTexture} icon="✨" delay={240} />
+        <ScoreBar label="視覺年輕度" score={scores.youthfulness}icon="🌿" delay={320} />
       </div>
 
-      {/* Face info + skin detail */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white/5 rounded-2xl p-5">
-          <h4 className="text-sm font-semibold text-white/70 mb-4 uppercase tracking-wider">臉部資訊</h4>
-          <div className="space-y-3">
+      {/* Face info + skin analysis side by side on tablet+ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="bg-white/5 rounded-2xl p-4">
+          <h4 className="text-xs font-semibold text-white/60 mb-3 uppercase tracking-wider">臉部資訊</h4>
+          <div className="space-y-2.5">
             <div className="flex justify-between">
-              <span className="text-white/60 text-sm">臉型分類</span>
-              <span className="text-yellow-400 font-semibold">{faceShape}</span>
+              <span className="text-white/55 text-sm">臉型</span>
+              <span className="text-yellow-400 font-semibold text-sm">{faceShape}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-white/60 text-sm">視覺年齡估測</span>
-              <span className="text-white font-semibold">{detectedAge} 歲</span>
+              <span className="text-white/55 text-sm">視覺年齡</span>
+              <span className="text-white font-semibold text-sm">{detectedAge} 歲</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-white/60 text-sm">魅力總分</span>
-              <span className={`font-bold text-lg ${scores.total >= 75 ? 'text-green-400' : scores.total >= 60 ? 'text-yellow-400' : 'text-orange-400'}`}>
+              <span className="text-white/55 text-sm">魅力總分</span>
+              <span className={`font-bold text-base ${scores.total >= 75 ? 'text-green-400' : scores.total >= 60 ? 'text-yellow-400' : 'text-orange-400'}`}>
                 {Math.round(scores.total)} / 100
               </span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white/5 rounded-2xl p-5">
-          <h4 className="text-sm font-semibold text-white/70 mb-4 uppercase tracking-wider">膚況分析</h4>
+        <div className="bg-white/5 rounded-2xl p-4">
+          <h4 className="text-xs font-semibold text-white/60 mb-3 uppercase tracking-wider">膚況分析</h4>
           <SkinMetric label="膚色均勻度" value={skin.evenness} />
-          <SkinMetric label="膚色亮度" value={skin.brightness} />
-          <SkinMetric label="肌膚紋理" value={skin.texture} />
+          <SkinMetric label="膚色亮度"   value={skin.brightness} />
+          <SkinMetric label="肌膚紋理"   value={skin.texture} />
           <SkinMetric label="保水度（估）" value={skin.hydration} />
-          <SkinMetric label="泛紅程度" value={skin.redness} invert />
+          <SkinMetric label="泛紅程度"   value={skin.redness} invert />
         </div>
       </div>
 
-      {/* Top improvements */}
-      <div className="bg-white/5 rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      {/* Priority improvements */}
+      <div className="bg-white/5 rounded-2xl p-4">
+        <h3 className="text-base font-semibold text-white mb-3 flex items-center gap-2">
           <span>🎯</span> 優化優先序
         </h3>
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {topImprovements.map((item, idx) => (
-            <div key={item.dimension} className="flex items-center gap-4 p-3 bg-white/5 rounded-xl">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
-                ${idx === 0 ? 'bg-yellow-400 text-black' : idx === 1 ? 'bg-white/20 text-white' : 'bg-white/10 text-white/70'}`}>
+            <div key={item.dimension} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0
+                ${idx === 0 ? 'bg-yellow-400 text-black' : idx === 1 ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'}`}>
                 {item.priority}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="text-white font-medium text-sm">{item.dimensionLabel}</div>
-                <div className="text-white/50 text-xs">現分 {Math.round(item.currentScore)} 分</div>
+                <div className="text-white/45 text-xs">現分 {Math.round(item.currentScore)}</div>
               </div>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <div className="text-green-400 font-bold text-sm">+{item.improvementPotential}</div>
-                <div className="text-white/40 text-xs">可提升</div>
+                <div className="text-white/35 text-xs">可提升</div>
               </div>
             </div>
           ))}
