@@ -1,4 +1,4 @@
-import { Treatment, TreatmentPlan, FaceScores } from '@/types';
+import { Treatment, TreatmentPlan, FaceScores, ProjectedScores } from '@/types';
 
 const ALL_TREATMENTS: Omit<Treatment, 'roi'>[] = [
   // ─── SKINCARE ───────────────────────────────────────────────────────────────
@@ -344,4 +344,78 @@ export function buildPlan(treatments: Treatment[]): TreatmentPlan {
       ...professional.slice(0, 3),
     ],
   };
+}
+
+// Per-treatment dimension improvement distribution
+const DIMENSION_WEIGHTS: Record<string, Partial<Record<keyof Omit<FaceScores, 'total'>, number>>> = {
+  sunscreen:         { skinTexture: 0.6, youthfulness: 0.4 },
+  'aha-bha':         { skinTexture: 0.7, youthfulness: 0.3 },
+  'vitamin-c':       { skinTexture: 0.6, youthfulness: 0.4 },
+  'hyaluronic-acid': { youthfulness: 0.6, skinTexture: 0.4 },
+  niacinamide:       { skinTexture: 0.65, youthfulness: 0.35 },
+  retinol:           { skinTexture: 0.5, youthfulness: 0.35, contour: 0.15 },
+  peptide:           { youthfulness: 0.5, contour: 0.3, skinTexture: 0.2 },
+  'eye-cream':       { youthfulness: 0.7, skinTexture: 0.3 },
+  'ceramide-moisturizer': { skinTexture: 0.6, youthfulness: 0.4 },
+  hydrafacial:       { skinTexture: 0.6, youthfulness: 0.4 },
+  ipl:               { skinTexture: 0.65, youthfulness: 0.35 },
+  botox:             { symmetry: 0.5, youthfulness: 0.35, proportion: 0.15 },
+  filler:            { contour: 0.45, proportion: 0.35, youthfulness: 0.2 },
+  'fractional-laser':{ skinTexture: 0.55, youthfulness: 0.3, proportion: 0.15 },
+  prp:               { skinTexture: 0.55, youthfulness: 0.45 },
+  ultherapy:         { contour: 0.55, youthfulness: 0.45 },
+  'thread-lift':     { contour: 0.45, youthfulness: 0.35, proportion: 0.2 },
+};
+
+export function calcProjectedScores(
+  current: FaceScores,
+  selected: Treatment[]
+): ProjectedScores {
+  const dims: Array<keyof Omit<FaceScores, 'total'>> = [
+    'contour', 'proportion', 'symmetry', 'skinTexture', 'youthfulness',
+  ];
+
+  const projected = { ...current };
+  const delta = { total: 0, contour: 0, proportion: 0, symmetry: 0, skinTexture: 0, youthfulness: 0 };
+
+  // Track which dimensions have been "improved" to avoid double-counting
+  const dimBudget: Record<string, number> = {
+    contour: 100 - current.contour,
+    proportion: 100 - current.proportion,
+    symmetry: 100 - current.symmetry,
+    skinTexture: 100 - current.skinTexture,
+    youthfulness: 100 - current.youthfulness,
+  };
+
+  for (const t of selected) {
+    const weights = DIMENSION_WEIGHTS[t.id];
+    if (!weights) continue;
+
+    for (const dim of dims) {
+      const w = weights[dim] ?? 0;
+      if (w === 0) continue;
+      const rawGain = t.improvementPoints * w;
+      // Cap gain to remaining room, and apply diminishing returns for stacking
+      const room = dimBudget[dim];
+      const actual = Math.min(rawGain * 0.7, room * 0.6);
+      delta[dim] = (delta[dim] ?? 0) + actual;
+      dimBudget[dim] = Math.max(0, dimBudget[dim] - actual);
+    }
+  }
+
+  for (const dim of dims) {
+    projected[dim] = Math.min(100, current[dim] + (delta[dim] ?? 0));
+  }
+
+  // Recalculate total
+  projected.total = Math.min(100,
+    projected.contour * 0.15 +
+    projected.proportion * 0.20 +
+    projected.symmetry * 0.20 +
+    projected.skinTexture * 0.25 +
+    projected.youthfulness * 0.20
+  );
+  delta.total = projected.total - current.total;
+
+  return { current, projected, delta };
 }
