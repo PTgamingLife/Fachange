@@ -58,6 +58,8 @@ export interface Treatment {
   description: string;
   tips: string[];
   roi: number;
+  // Per-dimension improvement breakdown
+  dimensionImprovements?: Partial<Record<keyof Omit<FaceScores, 'total'>, number>>;
 }
 
 export interface TreatmentPlan {
@@ -80,4 +82,31 @@ export interface AnalysisResult {
   improvements: ImprovementItem[];
   faceShape: string;
   detectedAge: number;
+  landmarks?: Point[];
+}
+
+// Projection / confirmation step
+export interface ProjectedScores {
+  current: FaceScores;
+  projected: FaceScores;
+  delta: FaceScores;
+}
+
+export interface AIProjectionReport {
+  summary: string;
+  zoneChanges: ZoneChange[];
+  timeline: TimelineStep[];
+  caution: string;
+}
+
+export interface ZoneChange {
+  zone: string;
+  treatment: string;
+  description: string;
+  improvement: 'high' | 'medium' | 'low';
+}
+
+export interface TimelineStep {
+  week: string;
+  milestone: string;
 }

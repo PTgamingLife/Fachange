@@ -2,15 +2,18 @@
 
 import { useState, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { AnalysisResult, Treatment, TreatmentPlan, AnalysisStatus } from '@/types';
+import { AnalysisResult, Treatment, TreatmentPlan, AnalysisStatus, ProjectedScores } from '@/types';
 import { buildTreatments, buildPlan } from '@/lib/recommendationEngine';
 
-const ImageUploader = dynamic(() => import('./ImageUploader'), { ssr: false });
-const ScoreRadar = dynamic(() => import('./ScoreRadar'), { ssr: false });
-const ScoreBreakdown = dynamic(() => import('./ScoreBreakdown'), { ssr: false });
-const TreatmentPlanView = dynamic(() => import('./TreatmentPlan'), { ssr: false });
+const ImageUploader    = dynamic(() => import('./ImageUploader'),    { ssr: false });
+const ScoreRadar       = dynamic(() => import('./ScoreRadar'),       { ssr: false });
+const ScoreBreakdown   = dynamic(() => import('./ScoreBreakdown'),   { ssr: false });
+const TreatmentPlanView = dynamic(() => import('./TreatmentPlan'),  { ssr: false });
+const TreatmentConfirm = dynamic(() => import('./TreatmentConfirm'), { ssr: false });
+const FaceProjection   = dynamic(() => import('./FaceProjection'),   { ssr: false });
 
 type ActiveTab = 'scores' | 'treatments';
+type AppStep = 'analysis' | 'confirm' | 'projection';
 
 const STATUS_MESSAGES: Partial<Record<AnalysisStatus, { text: string; icon: string }>> = {
   'loading-models': { text: '載入 AI 模型中…\n首次約需 30 秒', icon: '🤖' },
@@ -58,15 +61,36 @@ function MiniScore({ label, val }: { label: string; val: number }) {
   );
 }
 
+const MAX_B64_DIM = 1024;
+
+function extractBase64(img: HTMLImageElement): { base64: string; imageType: string } {
+  const scale = Math.min(1, MAX_B64_DIM / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+  const w = Math.round((img.naturalWidth || img.width) * scale);
+  const h = Math.round((img.naturalHeight || img.height) * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return { base64: '', imageType: 'image/jpeg' };
+  ctx.drawImage(img, 0, 0, w, h);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+  return { base64: dataUrl.split(',')[1] ?? '', imageType: 'image/jpeg' };
+}
+
 export default function FaceAnalyzer() {
-  const [status, setStatus] = useState<AnalysisStatus>('idle');
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [status, setStatus]       = useState<AnalysisStatus>('idle');
+  const [appStep, setAppStep]     = useState<AppStep>('analysis');
+  const [progress, setProgress]   = useState(0);
+  const [error, setError]         = useState<string | null>(null);
+  const [result, setResult]       = useState<AnalysisResult | null>(null);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
-  const [plan, setPlan] = useState<TreatmentPlan | null>(null);
+  const [plan, setPlan]           = useState<TreatmentPlan | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState('');
+  const [imageType, setImageType] = useState('image/jpeg');
   const [activeTab, setActiveTab] = useState<ActiveTab>('scores');
+  const [confirmedProjection, setConfirmedProjection] = useState<ProjectedScores | null>(null);
+  const [confirmedTreatments, setConfirmedTreatments] = useState<Treatment[]>([]);
   const imageRef = useRef<HTMLImageElement | null>(null);
 
   const handleImageReady = useCallback(async (img: HTMLImageElement, url: string) => {
@@ -74,8 +98,13 @@ export default function FaceAnalyzer() {
     imageRef.current = img;
     setError(null);
     setResult(null);
+    setAppStep('analysis');
     setStatus('loading-models');
     setProgress(0);
+
+    const { base64, imageType: type } = extractBase64(img);
+    setImageBase64(base64);
+    setImageType(type);
 
     try {
       const { loadModels, analyzeImage } = await import('@/lib/faceDetection');
@@ -110,11 +139,21 @@ export default function FaceAnalyzer() {
 
   const reset = () => {
     setStatus('idle');
+    setAppStep('analysis');
     setProgress(0);
     setError(null);
     setResult(null);
     setPreviewUrl(null);
+    setImageBase64('');
     setActiveTab('scores');
+    setConfirmedProjection(null);
+    setConfirmedTreatments([]);
+  };
+
+  const handleConfirm = (selected: Treatment[], projection: ProjectedScores) => {
+    setConfirmedTreatments(selected);
+    setConfirmedProjection(projection);
+    setAppStep('projection');
   };
 
   const isLoading = status === 'loading-models' || status === 'detecting' || status === 'analyzing';
@@ -182,12 +221,36 @@ export default function FaceAnalyzer() {
         </div>
       )}
 
-      {/* Results */}
-      {status === 'complete' && result && plan && (
+      {/* Treatment confirmation step */}
+      {status === 'complete' && result && appStep === 'confirm' && (
+        <TreatmentConfirm
+          treatments={treatments}
+          currentScores={result.scores}
+          onConfirm={handleConfirm}
+        />
+      )}
+
+      {/* AI projection step */}
+      {status === 'complete' && result && appStep === 'projection' && confirmedProjection && (
+        <FaceProjection
+          imageBase64={imageBase64}
+          imageType={imageType}
+          previewUrl={previewUrl ?? ''}
+          currentScores={result.scores}
+          projectedScores={confirmedProjection}
+          selectedTreatments={confirmedTreatments}
+          faceShape={result.faceShape}
+          detectedAge={result.detectedAge}
+          onBack={() => setAppStep('confirm')}
+          onReset={reset}
+        />
+      )}
+
+      {/* Main analysis results */}
+      {status === 'complete' && result && plan && appStep === 'analysis' && (
         <div className="space-y-5 animate-fade-in">
           {/* Score overview */}
           <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-4 md:p-6 border border-white/10">
-            {/* Top row: photo + ring */}
             <div className="flex items-center gap-4 mb-4">
               {previewUrl && (
                 <img
@@ -205,16 +268,14 @@ export default function FaceAnalyzer() {
               </div>
             </div>
 
-            {/* Mini score grid */}
             <div className="grid grid-cols-5 gap-2 bg-white/5 rounded-xl p-3 mb-4">
-              <MiniScore label="輪廓" val={result.scores.contour} />
-              <MiniScore label="比例" val={result.scores.proportion} />
-              <MiniScore label="對稱" val={result.scores.symmetry} />
-              <MiniScore label="膚質" val={result.scores.skinTexture} />
+              <MiniScore label="輪廓"  val={result.scores.contour} />
+              <MiniScore label="比例"  val={result.scores.proportion} />
+              <MiniScore label="對稱"  val={result.scores.symmetry} />
+              <MiniScore label="膚質"  val={result.scores.skinTexture} />
               <MiniScore label="年輕度" val={result.scores.youthfulness} />
             </div>
 
-            {/* Radar chart */}
             <ScoreRadar scores={result.scores} />
           </div>
 
@@ -249,6 +310,23 @@ export default function FaceAnalyzer() {
           {activeTab === 'treatments' && (
             <TreatmentPlanView treatments={treatments} plan={plan} />
           )}
+
+          {/* CTA: go to treatment confirm */}
+          <div className="bg-gradient-to-br from-yellow-400/15 to-amber-400/5 rounded-2xl p-4 border border-yellow-400/20">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-2xl">🎯</span>
+              <div>
+                <div className="text-white font-bold text-sm">選擇療程，預測你的改善效果</div>
+                <div className="text-white/45 text-xs">勾選想做的項目，AI 即時預估分數變化與臉部變化</div>
+              </div>
+            </div>
+            <button
+              onClick={() => setAppStep('confirm')}
+              className="w-full py-3 bg-yellow-400 text-black font-bold rounded-xl hover:bg-yellow-300 active:scale-95 transition-all text-sm"
+            >
+              選擇療程方案，查看 AI 預測 →
+            </button>
+          </div>
 
           <div className="flex justify-center pb-8">
             <button
