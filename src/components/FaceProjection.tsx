@@ -64,40 +64,43 @@ export default function FaceProjection({
   const [report, setReport] = useState<AIProjectionReport | null>(null);
   const hasFetched = useRef(false);
 
+  const runAnalysis = async () => {
+    setAiStatus('loading');
+    setReport(null);
+    try {
+      const res = await fetch(SUPABASE_ANALYZE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64,
+          imageType,
+          currentScores,
+          projectedScores,
+          selectedTreatments,
+          faceShape,
+          detectedAge,
+        }),
+      });
+      if (res.status === 404) { setAiStatus('unavailable'); return; }
+      let data: { error?: string; report?: AIProjectionReport } = {};
+      try { data = await res.json(); } catch { /* non-JSON response */ }
+      if (!res.ok) {
+        if (data.error === 'ANTHROPIC_API_KEY not configured') { setAiStatus('unavailable'); return; }
+        setAiStatus('error');
+        return;
+      }
+      if (data.error || !data.report) { setAiStatus('error'); return; }
+      setReport(data.report);
+      setAiStatus('success');
+    } catch {
+      setAiStatus('unavailable');
+    }
+  };
+
   useEffect(() => {
     if (hasFetched.current) return;
     hasFetched.current = true;
-
-    const run = async () => {
-      try {
-        const res = await fetch(SUPABASE_ANALYZE_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imageBase64,
-            imageType,
-            currentScores,
-            projectedScores,
-            selectedTreatments,
-            faceShape,
-            detectedAge,
-          }),
-        });
-        if (res.status === 404) { setAiStatus('unavailable'); return; }
-        if (!res.ok) { setAiStatus('error'); return; }
-        const data = await res.json();
-        if (data.error) {
-          if (data.error === 'ANTHROPIC_API_KEY not configured') { setAiStatus('unavailable'); return; }
-          setAiStatus('error');
-          return;
-        }
-        setReport(data.report);
-        setAiStatus('success');
-      } catch {
-        setAiStatus('unavailable');
-      }
-    };
-    run();
+    runAnalysis();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -191,8 +194,14 @@ export default function FaceProjection({
       )}
 
       {aiStatus === 'error' && (
-        <div className="bg-red-400/5 rounded-2xl p-4 border border-red-400/20 text-center">
+        <div className="bg-red-400/5 rounded-2xl p-4 border border-red-400/20 text-center space-y-3">
           <div className="text-white/60 text-sm">AI 分析發生錯誤，請稍後再試</div>
+          <button
+            onClick={runAnalysis}
+            className="px-4 py-2 bg-white/10 hover:bg-white/15 active:scale-95 transition-all rounded-xl text-white/70 text-sm"
+          >
+            重試
+          </button>
         </div>
       )}
 
