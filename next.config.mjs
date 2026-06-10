@@ -1,7 +1,13 @@
 /** @type {import('next').NextConfig} */
+const isProd = process.env.NODE_ENV === 'production';
+const repoName = 'Fachange';
+
 const nextConfig = {
-  // Vercel: no static export needed — API routes work natively
+  output: 'export',
+  basePath: isProd ? `/${repoName}` : '',
+  assetPrefix: isProd ? `/${repoName}/` : '',
   images: { unoptimized: true },
+  trailingSlash: true,
   webpack: (config, { isServer }) => {
     if (isServer) {
       const externals = Array.isArray(config.externals) ? config.externals : [];

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { FaceScores, Treatment, ProjectedScores, AIProjectionReport } from '@/types';
+import { SUPABASE_ANALYZE_URL } from '@/lib/supabaseConfig';
 import dynamic from 'next/dynamic';
 
 const ScoreRadar = dynamic(() => import('./ScoreRadar'), { ssr: false });
@@ -69,7 +70,7 @@ export default function FaceProjection({
 
     const run = async () => {
       try {
-        const res = await fetch('/api/analyze', {
+        const res = await fetch(SUPABASE_ANALYZE_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
