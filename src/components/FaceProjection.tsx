@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { FaceScores, Treatment, ProjectedScores, AIProjectionReport } from '@/types';
 import { SUPABASE_ANALYZE_URL } from '@/lib/supabaseConfig';
 import dynamic from 'next/dynamic';
+import BeforeAfterSlider from './BeforeAfterSlider';
 
 const ScoreRadar = dynamic(() => import('./ScoreRadar'), { ssr: false });
 
@@ -160,6 +161,9 @@ export default function FaceProjection({
           <ScoreBar label="視覺年輕度" from={currentScores.youthfulness} to={projectedScores.projected.youthfulness} />
         </div>
       </div>
+
+      {/* Before / After slider */}
+      <BeforeAfterSlider previewUrl={previewUrl} projectedScores={projectedScores} />
 
       {/* Radar before / after */}
       <div className="grid grid-cols-2 gap-3">
