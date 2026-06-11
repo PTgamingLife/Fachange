@@ -136,7 +136,14 @@ ${scoreTable}
     });
 
     if (!res.ok) {
-      throw new Error(`Anthropic API ${res.status}: ${await res.text()}`);
+      const errorText = await res.text();
+      if (res.status === 401 || res.status === 403) {
+        return new Response(
+          JSON.stringify({ error: 'ANTHROPIC_API_KEY invalid' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      throw new Error(`Anthropic API ${res.status}: ${errorText}`);
     }
 
     const data = await res.json();
