@@ -87,7 +87,10 @@ export default function FaceProjection({
       let data: { error?: string; detail?: string; report?: AIProjectionReport } = {};
       try { data = await res.json(); } catch { /* non-JSON response */ }
       if (!res.ok) {
-        if (data.error === 'ANTHROPIC_API_KEY not configured') { setAiStatus('unavailable'); return; }
+        if (
+          data.error === 'ANTHROPIC_API_KEY not configured' ||
+          data.error === 'ANTHROPIC_API_KEY invalid'
+        ) { setAiStatus('unavailable'); return; }
         setErrorDetail(data.detail ?? data.error ?? `HTTP ${res.status}`);
         setAiStatus('error');
         return;
@@ -186,15 +189,16 @@ export default function FaceProjection({
       )}
 
       {aiStatus === 'unavailable' && (
-        <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
+        <div className="bg-amber-400/5 rounded-2xl p-5 border border-amber-400/20">
           <div className="flex items-start gap-3">
-            <span className="text-2xl shrink-0">💡</span>
+            <span className="text-2xl shrink-0">🔑</span>
             <div>
-              <div className="text-white font-medium text-sm mb-1">AI 個人化分析需要伺服器</div>
+              <div className="text-white font-medium text-sm mb-1">AI 分析 API Key 未設定或無效</div>
               <div className="text-white/50 text-xs leading-relaxed">
-                在本地開發時配置{' '}
+                請至 Supabase 後台 → Edge Functions → analyze-face → Secrets，
+                更新{' '}
                 <code className="bg-white/10 px-1 rounded text-yellow-400">ANTHROPIC_API_KEY</code>
-                {' '}環境變數，即可啟用 Claude Vision 完整分析功能。上方分數為純數學模型預測結果，已可供參考。
+                {' '}為有效的 Anthropic API Key。上方分數為純數學模型預測結果，已可供參考。
               </div>
             </div>
           </div>
