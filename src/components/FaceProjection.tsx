@@ -62,11 +62,13 @@ export default function FaceProjection({
 }: Props) {
   const [aiStatus, setAiStatus] = useState<'loading' | 'success' | 'unavailable' | 'error'>('loading');
   const [report, setReport] = useState<AIProjectionReport | null>(null);
+  const [errorDetail, setErrorDetail] = useState('');
   const hasFetched = useRef(false);
 
   const runAnalysis = async () => {
     setAiStatus('loading');
     setReport(null);
+    setErrorDetail('');
     try {
       const res = await fetch(SUPABASE_ANALYZE_URL, {
         method: 'POST',
@@ -82,17 +84,23 @@ export default function FaceProjection({
         }),
       });
       if (res.status === 404) { setAiStatus('unavailable'); return; }
-      let data: { error?: string; report?: AIProjectionReport } = {};
+      let data: { error?: string; detail?: string; report?: AIProjectionReport } = {};
       try { data = await res.json(); } catch { /* non-JSON response */ }
       if (!res.ok) {
         if (data.error === 'ANTHROPIC_API_KEY not configured') { setAiStatus('unavailable'); return; }
+        setErrorDetail(data.detail ?? data.error ?? `HTTP ${res.status}`);
         setAiStatus('error');
         return;
       }
-      if (data.error || !data.report) { setAiStatus('error'); return; }
+      if (data.error || !data.report) {
+        setErrorDetail(data.detail ?? data.error ?? '');
+        setAiStatus('error');
+        return;
+      }
       setReport(data.report);
       setAiStatus('success');
-    } catch {
+    } catch (e) {
+      setErrorDetail(String(e));
       setAiStatus('unavailable');
     }
   };
@@ -196,6 +204,11 @@ export default function FaceProjection({
       {aiStatus === 'error' && (
         <div className="bg-red-400/5 rounded-2xl p-4 border border-red-400/20 text-center space-y-3">
           <div className="text-white/60 text-sm">AI 分析發生錯誤，請稍後再試</div>
+          {errorDetail && (
+            <div className="text-white/30 text-xs font-mono break-all text-left bg-white/5 rounded-xl p-2">
+              {errorDetail}
+            </div>
+          )}
           <button
             onClick={runAnalysis}
             className="px-4 py-2 bg-white/10 hover:bg-white/15 active:scale-95 transition-all rounded-xl text-white/70 text-sm"
