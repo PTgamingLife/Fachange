@@ -75,23 +75,17 @@ export default function FaceProjection({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          imageBase64,
-          imageType,
-          currentScores,
-          projectedScores,
-          selectedTreatments,
-          faceShape,
-          detectedAge,
+          imageBase64, imageType, currentScores, projectedScores,
+          selectedTreatments, faceShape, detectedAge,
         }),
       });
       if (res.status === 404) { setAiStatus('unavailable'); return; }
       let data: { error?: string; detail?: string; report?: AIProjectionReport } = {};
-      try { data = await res.json(); } catch { /* non-JSON response */ }
+      try { data = await res.json(); } catch { /* non-JSON */ }
       if (!res.ok) {
-        if (
-          data.error === 'ANTHROPIC_API_KEY not configured' ||
-          data.error === 'ANTHROPIC_API_KEY invalid'
-        ) { setAiStatus('unavailable'); return; }
+        if (data.error === 'ANTHROPIC_API_KEY not configured' || data.error === 'ANTHROPIC_API_KEY invalid') {
+          setAiStatus('unavailable'); return;
+        }
         setErrorDetail(data.detail ?? data.error ?? `HTTP ${res.status}`);
         setAiStatus('error');
         return;
@@ -135,11 +129,8 @@ export default function FaceProjection({
       <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-4 border border-white/10">
         <div className="flex gap-4 mb-4">
           {previewUrl && (
-            <img
-              src={previewUrl}
-              alt="分析照片"
-              className="w-20 h-20 object-cover rounded-xl ring-2 ring-yellow-400/30 shrink-0"
-            />
+            <img src={previewUrl} alt="分析照片"
+              className="w-20 h-20 object-cover rounded-xl ring-2 ring-yellow-400/30 shrink-0" />
           )}
           <div className="flex-1 flex flex-col justify-center gap-1">
             <div className="text-white/50 text-xs">預測整體提升</div>
@@ -152,7 +143,6 @@ export default function FaceProjection({
             </div>
           </div>
         </div>
-
         <div className="space-y-2.5">
           <ScoreBar label="輪廓臉型"   from={currentScores.contour}      to={projectedScores.projected.contour} />
           <ScoreBar label="五官比例"   from={currentScores.proportion}   to={projectedScores.projected.proportion} />
@@ -162,7 +152,7 @@ export default function FaceProjection({
         </div>
       </div>
 
-      {/* Before / After slider */}
+      {/* Before / After photo slider */}
       <BeforeAfterSlider previewUrl={previewUrl} projectedScores={projectedScores} />
 
       {/* Radar before / after */}
@@ -177,17 +167,14 @@ export default function FaceProjection({
         </div>
       </div>
 
-      {/* AI report section */}
+      {/* AI report */}
       {aiStatus === 'loading' && (
         <div className="bg-white/5 rounded-2xl p-6 text-center space-y-3">
           <div className="text-4xl animate-bounce">🤖</div>
           <div className="text-white font-medium text-sm">Claude AI 正在分析您的臉部特徵…</div>
           <div className="text-white/40 text-xs">個人化分析需 10–20 秒</div>
           <div className="w-48 mx-auto bg-white/10 rounded-full h-1.5 overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full animate-pulse"
-              style={{ width: '65%' }}
-            />
+            <div className="h-full bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full animate-pulse" style={{ width: '65%' }} />
           </div>
         </div>
       )}
@@ -200,9 +187,8 @@ export default function FaceProjection({
               <div className="text-white font-medium text-sm mb-1">AI 分析 API Key 未設定或無效</div>
               <div className="text-white/50 text-xs leading-relaxed">
                 請至 Supabase 後台 → Edge Functions → analyze-face → Secrets，
-                更新{' '}
-                <code className="bg-white/10 px-1 rounded text-yellow-400">ANTHROPIC_API_KEY</code>
-                {' '}為有效的 Anthropic API Key。上方分數為純數學模型預測結果，已可供參考。
+                更新 <code className="bg-white/10 px-1 rounded text-yellow-400">ANTHROPIC_API_KEY</code>。
+                上方分數為純數學模型預測結果，已可供參考。
               </div>
             </div>
           </div>
@@ -217,10 +203,8 @@ export default function FaceProjection({
               {errorDetail}
             </div>
           )}
-          <button
-            onClick={runAnalysis}
-            className="px-4 py-2 bg-white/10 hover:bg-white/15 active:scale-95 transition-all rounded-xl text-white/70 text-sm"
-          >
+          <button onClick={runAnalysis}
+            className="px-4 py-2 bg-white/10 hover:bg-white/15 active:scale-95 transition-all rounded-xl text-white/70 text-sm">
             重試
           </button>
         </div>
@@ -228,7 +212,6 @@ export default function FaceProjection({
 
       {aiStatus === 'success' && report && (
         <div className="space-y-4">
-          {/* Summary */}
           <div className="bg-gradient-to-br from-yellow-400/10 to-amber-400/5 rounded-2xl p-4 border border-yellow-400/20">
             <h4 className="text-yellow-400 font-bold text-sm mb-2 flex items-center gap-1.5">
               <span>✨</span> AI 整體分析
@@ -236,7 +219,6 @@ export default function FaceProjection({
             <p className="text-white/80 text-sm leading-relaxed">{report.summary}</p>
           </div>
 
-          {/* Zone changes */}
           <div className="bg-white/5 rounded-2xl p-4">
             <h4 className="text-white/50 text-xs font-semibold uppercase tracking-wider mb-3">分區改善預測</h4>
             <div className="space-y-3">
@@ -246,9 +228,7 @@ export default function FaceProjection({
                   <div key={i} className={`rounded-xl p-3 border ${cfg.bg} ${cfg.border}`}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-white text-sm font-medium">{z.zone}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color} border ${cfg.border}`}>
-                        {cfg.label}
-                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color} border ${cfg.border}`}>{cfg.label}</span>
                     </div>
                     <div className="text-white/40 text-xs mb-1.5">{z.treatment}</div>
                     <div className="text-white/65 text-xs leading-relaxed">{z.description}</div>
@@ -258,7 +238,6 @@ export default function FaceProjection({
             </div>
           </div>
 
-          {/* Timeline */}
           <div className="bg-white/5 rounded-2xl p-4">
             <h4 className="text-white/50 text-xs font-semibold uppercase tracking-wider mb-3">改善時間軸</h4>
             <div className="space-y-1">
@@ -281,7 +260,6 @@ export default function FaceProjection({
             </div>
           </div>
 
-          {/* Caution */}
           <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
             <h4 className="text-white/50 text-xs font-semibold mb-2 flex items-center gap-1.5">
               <span>⚠️</span> 注意事項
@@ -291,18 +269,13 @@ export default function FaceProjection({
         </div>
       )}
 
-      {/* Bottom actions */}
       <div className="flex gap-3 pb-8">
-        <button
-          onClick={onBack}
-          className="flex-1 py-3 bg-white/10 text-white/70 rounded-xl hover:bg-white/15 active:scale-95 transition-all text-sm font-medium"
-        >
+        <button onClick={onBack}
+          className="flex-1 py-3 bg-white/10 text-white/70 rounded-xl hover:bg-white/15 active:scale-95 transition-all text-sm font-medium">
           修改方案
         </button>
-        <button
-          onClick={onReset}
-          className="flex-1 py-3 bg-yellow-400 text-black rounded-xl hover:bg-yellow-300 active:scale-95 transition-all text-sm font-bold"
-        >
+        <button onClick={onReset}
+          className="flex-1 py-3 bg-yellow-400 text-black rounded-xl hover:bg-yellow-300 active:scale-95 transition-all text-sm font-bold">
           重新分析
         </button>
       </div>

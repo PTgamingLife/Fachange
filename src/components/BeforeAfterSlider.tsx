@@ -20,14 +20,18 @@ export default function BeforeAfterSlider({ previewUrl, projectedScores }: Props
   }, []);
 
   const { delta } = projectedScores;
-  const skinFactor  = Math.min(delta.skinTexture  / 100, 0.3);
-  const youthFactor = Math.min(delta.youthfulness / 100, 0.25);
-  const totalFactor = Math.min(delta.total        / 100, 0.2);
 
+  // Scale factors — kept proportional but multiplied to cross perceptual threshold
+  const skinFactor  = Math.min(delta.skinTexture  / 100, 0.3);   // 0–0.3
+  const youthFactor = Math.min(delta.youthfulness / 100, 0.25);  // 0–0.25
+  const totalFactor = Math.min(delta.total        / 100, 0.2);   // 0–0.2
+
+  // Visible: brightness +0–12%, contrast −0–8%, saturate +0–35%, blur 0–0.4px softer
   const afterFilter = [
-    `brightness(${(1 + totalFactor * 0.12).toFixed(3)})`,
-    `contrast(${(1 - skinFactor * 0.08).toFixed(3)})`,
-    `saturate(${(1 + youthFactor * 0.25).toFixed(3)})`,
+    `brightness(${(1 + totalFactor  * 0.6).toFixed(3)})`,
+    `contrast(${(1  - skinFactor   * 0.27).toFixed(3)})`,
+    `saturate(${(1  + youthFactor  * 1.4).toFixed(3)})`,
+    `blur(${(skinFactor * 0.4).toFixed(2)}px)`,
   ].join(' ');
 
   return (
@@ -45,7 +49,7 @@ export default function BeforeAfterSlider({ previewUrl, projectedScores }: Props
         onPointerUp={() => { dragging.current = false; }}
         onPointerCancel={() => { dragging.current = false; }}
       >
-        {/* After — filtered */}
+        {/* After — filtered (skin smoother, brighter, more saturated) */}
         <img
           src={previewUrl}
           alt="療程後預測"
@@ -54,7 +58,7 @@ export default function BeforeAfterSlider({ previewUrl, projectedScores }: Props
           draggable={false}
         />
 
-        {/* Before — clipped to left portion */}
+        {/* Before — original, clipped to left portion */}
         <img
           src={previewUrl}
           alt="目前"
@@ -75,7 +79,7 @@ export default function BeforeAfterSlider({ previewUrl, projectedScores }: Props
           </div>
         </div>
 
-        {/* Corner labels */}
+        {/* Labels */}
         <span className="absolute top-2 left-2 text-xs text-white/90 bg-black/50 px-2 py-0.5 rounded-full pointer-events-none">
           目前
         </span>
